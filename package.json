@@ -1,0 +1,17 @@
+{
+  "name": "yaml-env-bridge",
+  "version": "0.1.0",
+  "description": "Strict-by-default converter between YAML config files and flat .env files",
+  "type": "module",
+  "license": "MIT",
+  "bin": {
+    "yaml-env-bridge": "./dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/cli.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
