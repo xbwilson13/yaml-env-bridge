@@ -120,6 +120,12 @@ node dist/cli.js config.yaml
 
 There are no runtime dependencies.
 
+Run the test suite with:
+
+```
+npm test
+```
+
 ## License
 
 MIT, see LICENSE.
