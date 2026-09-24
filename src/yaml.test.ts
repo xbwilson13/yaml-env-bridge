@@ -58,8 +58,25 @@ test('rejects anchors, aliases and tags', () => {
   assert.throws(() => parseYaml('a: !!str value\n'), YamlParseError);
 });
 
-test('rejects list items that are themselves maps', () => {
-  assert.throws(() => parseYaml('items:\n  - a: 1\n    b: 2\n'), YamlParseError);
+test('parses lists whose items are maps', () => {
+  const doc = parseYaml('items:\n  - a: 1\n    b: 2\n  - a: 3\n    b: 4\n');
+  assert.deepEqual(doc, { items: [{ a: 1, b: 2 }, { a: 3, b: 4 }] });
+});
+
+test('parses list-of-maps items with nested values', () => {
+  const doc = parseYaml('items:\n  - name: web\n    tags:\n      - a\n      - b\n  - name: worker\n');
+  assert.deepEqual(doc, {
+    items: [
+      { name: 'web', tags: ['a', 'b'] },
+      { name: 'worker' },
+    ],
+  });
+});
+
+test('serializeYaml round-trips a list of maps through parseYaml', () => {
+  const original = { items: [{ a: 1, b: 'x' }, { a: 2, b: 'y', c: { nested: true } }] };
+  const text = serializeYaml(original);
+  assert.deepEqual(parseYaml(text), original);
 });
 
 test('rejects unexpected indentation', () => {

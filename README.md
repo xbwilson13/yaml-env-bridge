@@ -99,15 +99,18 @@ native types.
 
 This ships with a small hand-written YAML reader rather than pulling in a
 dependency, so it only covers the subset actually needed for flat-ish config
-files: block mappings, block lists of scalars, and scalar values (strings,
-numbers, booleans, null). It will raise a clear error, not a silent wrong
-answer, on:
+files: block mappings, block lists (of scalars or maps), and scalar values
+(strings, numbers, booleans, null). It will raise a clear error, not a silent
+wrong answer, on:
 
 - flow style (`key: [a, b]`, `key: {a: b}`)
 - block scalars (`|` and `>`)
 - anchors, aliases, and tags (`&foo`, `*foo`, `!!str`)
 - multi-document files (`---` separators)
-- lists whose items are themselves mappings
+
+Note that a list of maps still has no flat env-var equivalent: a list entry
+that's a map has no key of its own to join with `__`, so converting one to
+`.env` is a hard error even with `--lenient`.
 
 ## Install
 

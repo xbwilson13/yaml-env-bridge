@@ -1,8 +1,9 @@
 // Minimal YAML reader/writer for the config subset this tool cares about:
-// block mappings, block lists of scalars, and scalar values (string, number,
-// boolean, null). No flow style, anchors, tags, multi-document files, or
-// block scalars (| and >) - those get an explicit error instead of a wrong
-// silent parse. See README for the full list of what's out of scope.
+// block mappings, block lists (of scalars or maps), and scalar values
+// (string, number, boolean, null). No flow style, anchors, tags,
+// multi-document files, or block scalars (| and >) - those get an explicit
+// error instead of a wrong silent parse. See README for the full list of
+// what's out of scope.
 
 export type YamlScalar = string | number | boolean | null;
 export type YamlValue = YamlScalar | YamlValue[] | { [key: string]: YamlValue };
@@ -164,7 +165,20 @@ function parseList(lines: Line[], start: number, indent: number): [YamlValue[], 
       continue;
     }
     if (!isQuoted(rest) && findColon(rest) !== -1) {
-      throw new YamlParseError(`line ${line.lineNo}: list items that are themselves maps aren't supported yet`, line.lineNo);
+      // Inline map item ("- key: value"): the map's fields sit two columns in from
+      // the dash, so splice a synthetic first line at that indent and hand the
+      // whole run of same-or-deeper lines to parseMap.
+      const itemIndent = indent + 2;
+      const itemLines: Line[] = [{ indent: itemIndent, text: rest, lineNo: line.lineNo }];
+      let j = i + 1;
+      while (j < lines.length && lines[j].indent >= itemIndent) {
+        itemLines.push(lines[j]);
+        j++;
+      }
+      const [map] = parseMap(itemLines, 0, itemIndent);
+      result.push(map);
+      i = j;
+      continue;
     }
     result.push(parseScalar(rest, line.lineNo));
     i++;
@@ -210,7 +224,14 @@ function serializeBlock(value: YamlValue, depth: number): string {
   if (Array.isArray(value)) {
     if (value.length === 0) return `${pad}[]\n`;
     return value
-      .map((item) => (isScalar(item) ? `${pad}- ${serializeScalar(item)}\n` : `${pad}-\n${serializeBlock(item, depth + 1)}`))
+      .map((item) => {
+        if (isScalar(item)) return `${pad}- ${serializeScalar(item)}\n`;
+        if (Array.isArray(item)) return `${pad}-\n${serializeBlock(item, depth + 1)}`;
+        // Map items read better as "- key: value" with the rest of the keys
+        // aligned under it, rather than a bare dash on its own line.
+        const childPad = `${pad}  `;
+        return serializeBlock(item, depth + 1).replace(childPad, `${pad}- `);
+      })
       .join('');
   }
   const obj = value as Record<string, YamlValue>;
