@@ -159,6 +159,33 @@ function unquoteEnvValue(raw: string): string {
   return raw;
 }
 
+export interface EnvDiffEntry {
+  key: string;
+  kind: 'added' | 'removed' | 'changed';
+  expected?: string;
+  actual?: string;
+}
+
+// "expected" is what the yaml source would produce, "actual" is what's
+// currently sitting in the .env file on disk. Sorted by key so the report
+// is stable across runs regardless of either map's insertion order.
+export function diffEnv(expected: EnvMap, actual: EnvMap): EnvDiffEntry[] {
+  const keys = Array.from(new Set([...Object.keys(expected), ...Object.keys(actual)])).sort();
+  const entries: EnvDiffEntry[] = [];
+  for (const key of keys) {
+    const inExpected = Object.prototype.hasOwnProperty.call(expected, key);
+    const inActual = Object.prototype.hasOwnProperty.call(actual, key);
+    if (inExpected && !inActual) {
+      entries.push({ key, kind: 'added', expected: expected[key] });
+    } else if (!inExpected && inActual) {
+      entries.push({ key, kind: 'removed', actual: actual[key] });
+    } else if (expected[key] !== actual[key]) {
+      entries.push({ key, kind: 'changed', expected: expected[key], actual: actual[key] });
+    }
+  }
+  return entries;
+}
+
 export function serializeEnvFile(env: EnvMap): string {
   return Object.keys(env)
     .map((key) => `${key}=${quoteEnvValue(env[key])}\n`)

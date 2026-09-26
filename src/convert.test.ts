@@ -5,6 +5,7 @@ import {
   envToYaml,
   parseEnvFile,
   serializeEnvFile,
+  diffEnv,
   StrictModeError,
 } from './convert.js';
 
@@ -112,6 +113,30 @@ test('yamlToEnv and envToYaml round-trip a flat document without --lenient', () 
   const doc = envToYaml(original);
   const env = yamlToEnv(doc);
   assert.deepEqual(env, original);
+});
+
+test('diffEnv reports no differences for matching maps', () => {
+  assert.deepEqual(diffEnv({ a: '1', b: '2' }, { a: '1', b: '2' }), []);
+});
+
+test('diffEnv reports keys missing from the actual map as added', () => {
+  assert.deepEqual(diffEnv({ a: '1', b: '2' }, { a: '1' }), [{ key: 'b', kind: 'added', expected: '2' }]);
+});
+
+test('diffEnv reports keys not derived from the source as removed', () => {
+  assert.deepEqual(diffEnv({ a: '1' }, { a: '1', stale: 'old' }), [{ key: 'stale', kind: 'removed', actual: 'old' }]);
+});
+
+test('diffEnv reports differing values as changed', () => {
+  assert.deepEqual(diffEnv({ a: '1' }, { a: '2' }), [{ key: 'a', kind: 'changed', expected: '1', actual: '2' }]);
+});
+
+test('diffEnv sorts entries by key regardless of insertion order', () => {
+  const diffs = diffEnv({ z: '1', a: '2' }, {});
+  assert.deepEqual(
+    diffs.map((d) => d.key),
+    ['a', 'z'],
+  );
 });
 
 test('yamlToEnv and envToYaml round-trip a nested document with --lenient', () => {

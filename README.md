@@ -95,6 +95,27 @@ infers numbers/booleans from the plain-string env values. Without
 string values, which is the honest round trip for a format that has no
 native types.
 
+### `--check`
+
+`--check <env-file>` compares what the yaml source would produce against an
+existing `.env` file, without writing anything. Useful in CI to catch a
+`.env` that's drifted out of sync with the config it was generated from:
+
+```
+$ yaml-env-bridge config.yaml --check .env
+~ port=8080 -> 9090
+- OLD_FLAG=true
+$ echo $?
+1
+```
+
+`+` means a key the yaml source produces that's missing from the `.env`
+file, `-` means a key in the `.env` file that the yaml source no longer
+produces, and `~` shows a changed value as `actual -> expected`. Exits 0
+with no output other than a confirmation line when the files already match.
+`--check` only makes sense going from yaml to env, and can't be combined
+with `--out`.
+
 ## What the YAML side does not support
 
 This ships with a small hand-written YAML reader rather than pulling in a
